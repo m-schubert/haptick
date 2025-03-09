@@ -48,6 +48,30 @@ class Haptick:
                         radius * np.sin(angles),
                         np.ones_like(angles) * z))
 
+
+class Calibrated:
+    def __init__(self, *args, **kwargs):
+        self._inverse_plucker = np.array(
+            [[ 1.48862401e-05,  2.76502996e-06,  5.53373707e-06,
+               3.98716180e-04,  2.59766013e-04, -3.61150780e-04],
+             [ 6.43781132e-06, -1.25650148e-05,  5.20549767e-06,
+              -1.75681170e-05,  4.64222079e-04,  3.13188320e-04],
+             [-7.65757954e-06,  9.39886367e-06,  4.09631079e-06,
+              -2.88297511e-04,  1.68500587e-04, -2.76560089e-04],
+             [ 7.51952982e-06,  1.00158107e-05,  5.66408608e-06,
+              -3.81647492e-04, -2.27210674e-04,  2.84961738e-04],
+             [-4.40060451e-06, -1.11953744e-05,  3.65874605e-06,
+              1.44982980e-05, -3.51931260e-04, -2.82225406e-04],
+             [-9.03131292e-06,  6.38641612e-07,  2.86527532e-06,
+              2.67442245e-04, -1.53313519e-04,  2.09360902e-04]]
+        )
+        self._plucker = np.linalg.inv(self._inverse_plucker)
+
+    def applied(self, truss_force_magnitudes):
+        forces_torques = -(self._plucker @ np.atleast_2d(truss_force_magnitudes).T)
+        return forces_torques[:3, ...], forces_torques[3:, ...]
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.ion()

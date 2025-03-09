@@ -247,7 +247,7 @@ class CubeControl(QWidget):
 
         # Create a free body Haptick to be able to calculate forces and torques
         separation = 2 * np.pi * 25e-3 * 25.0 / 360.0
-        self._haptick = free_body.Haptick(25e-3, separation, 25e-3, separation, 20e-3)
+        self._haptick = free_body.Calibrated(25e-3, separation, 25e-3, separation, 20e-3)
 
         # Create a rotation that takes vectors from Haptick space to real desk
         # space. Haptick space has the positive x-axis going into the screen and
@@ -261,8 +261,8 @@ class CubeControl(QWidget):
 
         # Default thresholds and sensitivities
         self._threshold = 1.0e-6
-        self._translation_sensitivity = 1.2e6
-        self._rotation_sensitivity = 1.2e7
+        self._translation_sensitivity = 2
+        self._rotation_sensitivity = 50
     
     def add_values(self, values):
         # Get the most recent arm forces. Base arm index 0 and 1 should be
@@ -279,7 +279,9 @@ class CubeControl(QWidget):
 
         # Use the free body model to calculate the force and torque applied to
         # the platform.
-        force, torque = self._haptick.applied(arm_forces)
+        force, torque = self._haptick.applied(-values[-1])
+
+        #print(f"{torque[:,-1]}")
 
         # We know Haptick uses a constant sampling rate, so the elapsed time
         # since the last batch of samples is the sampling period times the
@@ -289,10 +291,12 @@ class CubeControl(QWidget):
         # Calculate the translation and rotation from the applied forces and
         # torques. We make linear velocity directly proportional to the force
         # and rotational velocity directly proportional to the torque.
-        linear_velocity = self._haptick_to_desk.apply(
-            force[:, 0] * self._translation_sensitivity)
-        rotational_velocity = self._haptick_to_desk.apply(
-            torque[:, 0] * self._rotation_sensitivity)
+        linear_velocity = force[:,0] * self._translation_sensitivity
+        rotational_velocity = torque[:, 0] * self._rotation_sensitivity
+        #linear_velocity = self._haptick_to_desk.apply(
+        #    force[:, 0] * self._translation_sensitivity)
+        #rotational_velocity = self._haptick_to_desk.apply(
+        #    torque[:, 0] * self._rotation_sensitivity)
         self._translation += self.ui.cubeDisplay.desk_to_eye.apply(linear_velocity * time)
         self._rotation = Rotation.from_rotvec(self.ui.cubeDisplay.desk_to_eye.apply(rotational_velocity * time)) * self._rotation
 
@@ -314,7 +318,7 @@ class CubeControl(QWidget):
         self._threshold = value * 1.0e-7
     
     def _change_rotation_sensitivity(self, value):
-        self._rotation_sensitivity = value * 1.2e6
+        self._rotation_sensitivity = value * 5
 
     def _change_translation_sensitivity(self, value):
-        self._translation_sensitivity = value * 1.2e5
+        self._translation_sensitivity = value * 0.2
